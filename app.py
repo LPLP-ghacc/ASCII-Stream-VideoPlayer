@@ -5,6 +5,7 @@ from moviepy.editor import VideoFileClip
 import os
 import time
 import tempfile
+import random
 
 ASCII_CHARS = "░@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/|()1{}[]?-_+~<>i!lI;:,^`'. "
 ASCII_CHARS = ASCII_CHARS[::-1]  # Invert for better visual result
@@ -34,6 +35,14 @@ def get_video_files(directory):
     files = [os.path.join(directory, f) for f in os.listdir(directory) if f.split('.')[-1] in video_extensions]
     return files
 
+def matrix_effect(screen, ascii_image_lines, char_width, char_height):
+    for i, line in enumerate(ascii_image_lines):
+        for j, char in enumerate(line):
+            if random.random() < 0.1:  # Add randomness for dripping effect
+                y_offset = min(len(ascii_image_lines) - 1, i + 1)
+                ascii_image_lines[y_offset] = ascii_image_lines[y_offset][:j] + char + ascii_image_lines[y_offset][j + 1:]
+                ascii_image_lines[i] = ascii_image_lines[i][:j] + ' ' + ascii_image_lines[i][j + 1:]
+
 pygame.init()
 screen_width = 1920
 screen_height = 1080
@@ -44,19 +53,18 @@ font = pygame.font.SysFont('Courier', 12)
 video_directory = 'stream'
 
 if not os.path.exists(video_directory):
-        os.makedirs(video_directory)
+    os.makedirs(video_directory)
 
 current_video_index = 0
 video_files = get_video_files(video_directory)
 
 paused = False
-while True:
-    if not video_files:
-        print("No video files found. Waiting for files...")
-        while not video_files:
-            time.sleep(5)
-            video_files = get_video_files(video_directory)
-    
+started = False
+
+def play_video():
+    global current_video_index, video_files, started, paused, running, audio_path, video_fps, video_duration, start_time
+    global screen_width, screen_height, screen
+
     video_path = video_files[current_video_index]
     cap = cv2.VideoCapture(video_path)
 
@@ -77,13 +85,13 @@ while True:
     clock = pygame.time.Clock()
 
     start_time = time.time()
-
     running = True
+    started = True
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.mixer.music.stop()
-                time.sleep(1)  
+                time.sleep(1)
                 pygame.quit()
                 exit()
             elif event.type == pygame.VIDEORESIZE:
@@ -93,6 +101,7 @@ while True:
                 if event.key == pygame.K_ESCAPE:
                     pygame.mixer.music.stop()
                     time.sleep(1)
+                    os.remove(audio_path)
                     pygame.quit()
                     exit()
                 elif event.key == pygame.K_SPACE:
@@ -103,6 +112,12 @@ while True:
                         pygame.mixer.music.pause()
                         pauses_duration = time.time() - start_time
                     paused = not paused
+                elif event.key == pygame.K_RIGHT:
+                    current_video_index = (current_video_index + 1) % len(video_files)
+                    running = False
+                elif event.key == pygame.K_LEFT:
+                    current_video_index = (current_video_index - 1) % len(video_files)
+                    running = False
 
         if not paused:
             ret, frame = cap.read()
@@ -130,6 +145,16 @@ while True:
                     screen.blit(text_surface, (j * char_width, i * char_height))
 
             pygame.display.flip()
+        else:
+            # Apply matrix effect while paused
+            matrix_effect(screen, ascii_image_lines, char_width, char_height)
+            screen.fill((0, 0, 0))
+            for i, line in enumerate(ascii_image_lines):
+                for j, char in enumerate(line):
+                    color = COLORS.get(char, (255, 255, 255))
+                    text_surface = font.render(char, True, color)
+                    screen.blit(text_surface, (j * char_width, i * char_height))
+            pygame.display.flip()
 
         elapsed_time = time.time() - start_time
         if not paused and elapsed_time >= video_duration:
@@ -139,8 +164,21 @@ while True:
 
     cap.release()
     pygame.mixer.music.stop()
-    #time.sleep(1)
-    #os.remove(audio_path)
+    time.sleep(1)  # Добавляем задержку для полной остановки воспроизведения аудио
+    try:
+        os.remove(audio_path)  # Удаление временного аудио файла после использования
+    except PermissionError:
+        pass  # Игнорируем ошибку, если файл все еще занят процессом
+    started = False
+
+while True:
+    if not video_files:
+        print("No video files found. Waiting for files...")
+        while not video_files:
+            time.sleep(5)
+            video_files = get_video_files(video_directory)
+
+    play_video()
     current_video_index = (current_video_index + 1) % len(video_files)
     video_files = get_video_files(video_directory)
 
