@@ -119,6 +119,8 @@ def play_video():
                     current_video_index = (current_video_index - 1) % len(video_files)
                     running = False
 
+        elapsed_time = time.time() - start_time
+
         if not paused:
             ret, frame = cap.read()
             if not ret:
@@ -129,7 +131,7 @@ def play_video():
             char_width, char_height = font.size('P')
 
             new_width = screen_width // char_width
-            new_height = screen_height // char_height
+            new_height = screen_height // char_height - 1  # Оставляем место для прогресс-бара
 
             frame = resize(frame, new_width=new_width, new_height=new_height)
 
@@ -144,6 +146,12 @@ def play_video():
                     text_surface = font.render(char, True, color)
                     screen.blit(text_surface, (j * char_width, i * char_height))
 
+            # Рендер прогресс-бара снизу
+            progress = min(int((elapsed_time / video_duration) * new_width), new_width)
+            progress_line = '*' * progress + ' ' * (new_width - progress)
+            progress_surface = font.render(progress_line, True, (66, 66, 66))
+            screen.blit(progress_surface, (0, screen_height - char_height))
+
             pygame.display.flip()
         else:
             # Apply matrix effect while paused
@@ -154,9 +162,9 @@ def play_video():
                     color = COLORS.get(char, (255, 255, 255))
                     text_surface = font.render(char, True, color)
                     screen.blit(text_surface, (j * char_width, i * char_height))
+            
             pygame.display.flip()
 
-        elapsed_time = time.time() - start_time
         if not paused and elapsed_time >= video_duration:
             running = False
 
