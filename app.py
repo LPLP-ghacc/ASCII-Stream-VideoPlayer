@@ -131,7 +131,7 @@ def play_video():
             char_width, char_height = font.size('P')
 
             new_width = screen_width // char_width
-            new_height = screen_height // char_height - 1  # Оставляем место для прогресс-бара
+            new_height = screen_height // char_height - 1 
 
             frame = resize(frame, new_width=new_width, new_height=new_height)
 
@@ -146,7 +146,6 @@ def play_video():
                     text_surface = font.render(char, True, color)
                     screen.blit(text_surface, (j * char_width, i * char_height))
 
-            # Рендер прогресс-бара снизу
             progress = min(int((elapsed_time / video_duration) * new_width), new_width)
             progress_line = '*' * progress + ' ' * (new_width - progress)
             progress_surface = font.render(progress_line, True, (66, 66, 66))
@@ -172,11 +171,11 @@ def play_video():
 
     cap.release()
     pygame.mixer.music.stop()
-    time.sleep(1)  # Добавляем задержку для полной остановки воспроизведения аудио
+    time.sleep(1) 
     try:
-        os.remove(audio_path)  # Удаление временного аудио файла после использования
+        os.remove(audio_path) 
     except PermissionError:
-        pass  # Игнорируем ошибку, если файл все еще занят процессом
+        pass  
     started = False
 
 while True:
