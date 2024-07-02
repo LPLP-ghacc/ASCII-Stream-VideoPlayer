@@ -6,7 +6,7 @@ import os
 import time
 import tempfile
 
-ASCII_CHARS = "░@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/|()1{}[]?-_+~<>i!lI;:,^`'."
+ASCII_CHARS = "░@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/|()1{}[]?-_+~<>i!lI;:,^`'. "
 ASCII_CHARS = ASCII_CHARS[::-1]  # Invert for better visual result
 
 COLORS = {
@@ -42,6 +42,10 @@ pygame.display.set_caption('ASCII Video Renderer')
 font = pygame.font.SysFont('Courier', 12)
 
 video_directory = 'stream'
+
+if not os.path.exists(video_directory):
+        os.makedirs(video_directory)
+
 current_video_index = 0
 video_files = get_video_files(video_directory)
 
@@ -135,7 +139,7 @@ while True:
 
     cap.release()
     pygame.mixer.music.stop()
-    time.sleep(1)
+    #time.sleep(1)
     #os.remove(audio_path)
     current_video_index = (current_video_index + 1) % len(video_files)
     video_files = get_video_files(video_directory)

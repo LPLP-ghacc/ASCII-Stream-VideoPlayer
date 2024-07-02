@@ -1,2 +1,9 @@
 .venv
 stream
+input
+output
+build
+dist
+app.spec
+render.py
+renderMultithread.py
