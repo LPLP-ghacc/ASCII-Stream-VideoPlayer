@@ -6,13 +6,28 @@ import os
 import time
 import tempfile
 import random
+import json
 
 ASCII_CHARS = "░@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/|()1{}[]?-_+~<>i!lI;:,^`'. "
 ASCII_CHARS = ASCII_CHARS[::-1]  # Invert for better visual result
 
+MORSE_CODE_DICT = {
+    'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..', 'E': '.', 'F': '..-.', 'G': '--.', 'H': '....',
+    'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..', 'M': '--', 'N': '-.', 'O': '---', 'P': '.--.',
+    'Q': '--.-', 'R': '.-.', 'S': '...', 'T': '-', 'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-',
+    'Y': '-.--', 'Z': '--..',
+    '1': '.----', '2': '..---', '3': '...--', '4': '....-', '5': '.....', '6': '-....', '7': '--...',
+    '8': '---..', '9': '----.', '0': '-----'
+}
+
 COLORS = {
     '#': (245, 5, 183),
 }
+
+def text_to_morse(text):
+    text = text.upper()
+    morse_text = ' '.join([MORSE_CODE_DICT.get(char, char) for char in text])
+    return morse_text
 
 def grayscale(image):
     return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -43,14 +58,38 @@ def matrix_effect(screen, ascii_image_lines, char_width, char_height):
                 ascii_image_lines[y_offset] = ascii_image_lines[y_offset][:j] + char + ascii_image_lines[y_offset][j + 1:]
                 ascii_image_lines[i] = ascii_image_lines[i][:j] + ' ' + ascii_image_lines[i][j + 1:]
 
+# filepath must be like [pipapipa].json
+def get_prefs(file_path):
+    if not os.path.exists(file_path):
+        print("Creating default prefs file...")
+        default_prefs = {
+            "screen_size": (1920, 1080),
+            "stream_video_directory": "stream",
+            "title": True,
+            "progress_bar": True
+            }
+        json_object = json.dumps(default_prefs, indent=4)
+        with open(file_path, "w") as outfile:
+            outfile.write(json_object)
+
+        return get_prefs(file_path)
+    else:
+        with open(file_path, 'r') as openfile:
+            json_object = json.load(openfile)
+        return json_object
+        
+prefs = get_prefs('playerPrefs.json')
+
+size = prefs['screen_size']
+
 pygame.init()
-screen_width = 1920
-screen_height = 1080
+screen_width = size[0]
+screen_height = size[1]
 screen = pygame.display.set_mode((screen_width, screen_height), pygame.NOFRAME)
 pygame.display.set_caption('ASCII Video Renderer')
 font = pygame.font.SysFont('Courier', 12)
 
-video_directory = 'stream'
+video_directory = prefs['stream_video_directory']
 
 if not os.path.exists(video_directory):
     os.makedirs(video_directory)
@@ -73,6 +112,9 @@ def play_video():
 
     video_clip = VideoFileClip(video_path)
     audio = video_clip.audio
+
+    video_title = os.path.basename(video_path)
+    video_title_morse = text_to_morse(video_title)
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_audio_file:
         audio_path = temp_audio_file.name
@@ -131,7 +173,7 @@ def play_video():
             char_width, char_height = font.size('P')
 
             new_width = screen_width // char_width
-            new_height = screen_height // char_height - 1 
+            new_height = screen_height // char_height - 2 
 
             frame = resize(frame, new_width=new_width, new_height=new_height)
 
@@ -140,16 +182,21 @@ def play_video():
 
             screen.fill((0, 0, 0))
 
-            for i, line in enumerate(ascii_image_lines):
-                for j, char in enumerate(line):
-                    color = COLORS.get(char, (255, 255, 255))
-                    text_surface = font.render(char, True, color)
-                    screen.blit(text_surface, (j * char_width, i * char_height))
+            if(prefs['title'] == True):
+                title_surface = font.render(video_title_morse, True, (245, 5, 183))
+                screen.blit(title_surface, (0, 0))
 
-            progress = min(int((elapsed_time / video_duration) * new_width), new_width)
-            progress_line = '*' * progress + ' ' * (new_width - progress)
-            progress_surface = font.render(progress_line, True, (66, 66, 66))
-            screen.blit(progress_surface, (0, screen_height - char_height))
+                for i, line in enumerate(ascii_image_lines):
+                    for j, char in enumerate(line):
+                        color = COLORS.get(char, (255, 255, 255))
+                        text_surface = font.render(char, True, color)
+                        screen.blit(text_surface, (j * char_width, (i + 1) * char_height))
+
+            if(prefs['progress_bar'] == True):
+                progress = min(int((elapsed_time / video_duration) * new_width), new_width)
+                progress_line = '-' * progress + ' ' * (new_width - progress)
+                progress_surface = font.render(progress_line, True, (245, 5, 183))
+                screen.blit(progress_surface, (0, screen_height - char_height))
 
             pygame.display.flip()
         else:
@@ -160,7 +207,7 @@ def play_video():
                 for j, char in enumerate(line):
                     color = COLORS.get(char, (255, 255, 255))
                     text_surface = font.render(char, True, color)
-                    screen.blit(text_surface, (j * char_width, i * char_height))
+                    screen.blit(text_surface, (j * char_width, (i + 1) * char_height))
             
             pygame.display.flip()
 

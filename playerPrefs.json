@@ -1,0 +1,9 @@
+{
+    "screen_size": [
+        1920,
+        1080
+    ],
+    "stream_video_directory": "stream",
+    "title": true,
+    "progress_bar": true
+}

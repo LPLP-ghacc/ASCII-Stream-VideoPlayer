@@ -7,3 +7,4 @@ dist
 app.spec
 render.py
 renderMultithread.py
+renderYTStream.py
